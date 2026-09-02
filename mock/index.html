@@ -1,0 +1,925 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>落胆予報 — 学期途中の成績予報</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#FCFBF7;
+  --card:#FFFFFF;
+  --ink:#1C2438;
+  --ink-2:#4A5468;
+  --ink-3:#8B92A3;
+  --line:#DDD9CC;
+  --pen-blue:#2C43C4;
+  --pen-blue-dark:#20359E;
+  --red-pen:#D6402F;
+  --ok:#2E7D52;
+  --warn:#B57A10;
+  --grid-line:rgba(59,79,196,.07);
+  /* 授業項目のカテゴリ色(科目をまたいで項目に追従) */
+  --c-exam-mid:#3B4FC4;
+  --c-exam-fin:#0E8F85;
+  --c-kadai:#B57A10;
+  --c-quiz:#8E4FA8;
+  --radius:10px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  font-family:"Zen Kaku Gothic New","Hiragino Kaku Gothic ProN",Yu Gothic,sans-serif;
+  color:var(--ink);
+  background:
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px),
+    var(--paper);
+  background-size:28px 28px, 28px 28px, auto;
+  min-height:100vh;
+  line-height:1.7;
+  -webkit-font-smoothing:antialiased;
+}
+.num{font-family:"Fraunces",Georgia,serif;font-variant-numeric:tabular-nums}
+.mono{font-family:"IBM Plex Mono",Menlo,monospace}
+
+/* ---------- ヘッダ ---------- */
+.site-header{
+  max-width:1080px;margin:0 auto;padding:28px 24px 0;
+  display:flex;align-items:center;justify-content:space-between;gap:16px;
+}
+.logo{display:flex;align-items:center;gap:10px;font-weight:700;font-size:18px;letter-spacing:.08em}
+.logo svg{display:block}
+.logo button{
+  all:unset;cursor:pointer;display:flex;align-items:center;gap:10px;
+  font:inherit;color:inherit;border-radius:6px;
+}
+.logo button:focus-visible{outline:2px solid var(--pen-blue);outline-offset:3px}
+.semester{font-size:13px;color:var(--ink-2);display:flex;align-items:center;gap:8px}
+.dot-ok{width:8px;height:8px;border-radius:50%;background:var(--ok);display:inline-block}
+
+/* ---------- 画面切替 ---------- */
+.screen{display:none;max-width:1080px;margin:0 auto;padding:24px 24px 72px;animation:fadeUp .5s ease both}
+.screen.is-active{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion: reduce){
+  .screen{animation:none}
+  *{transition-duration:.001s !important;animation-duration:.001s !important}
+}
+
+/* ---------- 開始画面 ---------- */
+.hero{max-width:720px;margin:72px auto 0;text-align:left}
+.eyebrow{
+  font-size:12px;font-weight:700;letter-spacing:.22em;color:var(--pen-blue);
+  display:flex;align-items:center;gap:12px;margin-bottom:20px;
+}
+.eyebrow::before{content:"";width:28px;height:2px;background:var(--pen-blue)}
+.hero h1{
+  font-size:clamp(34px,5.6vw,56px);line-height:1.28;font-weight:700;
+  letter-spacing:.02em;margin-bottom:22px;
+}
+.hero h1 .accent{position:relative;white-space:nowrap}
+.hero h1 .accent::after{
+  content:"";position:absolute;left:-2px;right:-2px;bottom:6px;height:10px;
+  background:rgba(214,64,47,.22);border-radius:2px;transform:rotate(-1deg);
+}
+.hero .lead{font-size:16px;color:var(--ink-2);max-width:600px;margin-bottom:36px}
+
+.sheet-card{
+  background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+  padding:18px 20px;display:flex;align-items:center;gap:16px;
+  max-width:600px;box-shadow:0 1px 3px rgba(28,36,56,.06);margin-bottom:32px;
+}
+.sheet-icon{
+  width:44px;height:44px;flex:none;border-radius:8px;
+  background:#E8F0EA;display:flex;align-items:center;justify-content:center;
+}
+.sheet-card .sheet-name{font-weight:700;font-size:15px}
+.sheet-card .sheet-meta{font-size:13px;color:var(--ink-2);margin-top:2px}
+.sheet-status{margin-left:auto;flex:none;font-size:12px;font-weight:700;color:var(--ok);display:flex;align-items:center;gap:6px}
+
+.btn-primary{
+  display:inline-flex;align-items:center;gap:12px;
+  background:var(--pen-blue);color:#fff;border:none;border-radius:8px;
+  font-family:inherit;font-size:17px;font-weight:700;letter-spacing:.06em;
+  padding:16px 34px;cursor:pointer;
+  box-shadow:0 2px 0 var(--pen-blue-dark);
+  transition:transform .15s ease, box-shadow .15s ease, background .15s ease;
+}
+.btn-primary:hover{background:var(--pen-blue-dark);transform:translateY(-1px)}
+.btn-primary:active{transform:translateY(1px);box-shadow:none}
+.btn-primary:focus-visible{outline:3px solid rgba(44,67,196,.4);outline-offset:2px}
+.btn-primary .arrow{font-weight:400}
+.hero-note{font-size:12px;color:var(--ink-3);margin-top:18px}
+
+/* ---------- 処理画面 ---------- */
+.progress-wrap{max-width:640px;margin:56px auto 0}
+.progress-head{display:flex;align-items:baseline;justify-content:space-between;gap:16px;margin-bottom:8px}
+.progress-head h2{font-size:24px;font-weight:700}
+.progress-pct{font-size:30px;color:var(--pen-blue)}
+.progress-bar{height:6px;background:#E9E6DB;border-radius:3px;overflow:hidden;margin-bottom:14px}
+.progress-bar span{display:block;height:100%;width:0%;background:var(--pen-blue);border-radius:3px;transition:width .25s linear}
+
+/* AIステータス行 */
+.ai-status{
+  display:flex;align-items:center;gap:10px;font-size:13.5px;color:var(--ink-2);
+  margin-bottom:22px;min-height:22px;
+}
+.ai-orb{flex:none;width:16px;height:16px;position:relative}
+.ai-orb::before,.ai-orb::after{
+  content:"";position:absolute;inset:0;border-radius:50%;
+  background:radial-gradient(circle at 35% 30%, #7C90E4, var(--pen-blue));
+}
+.ai-orb::after{animation:orbPulse 1.6s ease-out infinite}
+@keyframes orbPulse{
+  0%{transform:scale(1);opacity:.55}
+  100%{transform:scale(2.4);opacity:0}
+}
+#ai-status-text{animation:fadeUp .35s ease both}
+
+/* スキャンシート */
+.scan-sheet{
+  background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+  padding:14px 16px 10px;margin-bottom:20px;overflow:hidden;
+}
+.sheet-scan-title{
+  font-size:11px;font-weight:700;letter-spacing:.14em;color:var(--ink-3);
+  margin-bottom:8px;display:flex;align-items:center;gap:6px;
+}
+.sheet-scan-title .rec{width:7px;height:7px;border-radius:50%;background:var(--red-pen);animation:blink 1s steps(2) infinite}
+@keyframes blink{50%{opacity:.15}}
+.scan-row{
+  display:grid;grid-template-columns:1.5fr 1fr .6fr;gap:8px;
+  font-size:12.5px;padding:6px 8px;border-radius:6px;color:var(--ink-3);
+  font-family:"IBM Plex Mono",Menlo,monospace;
+  transition:background .3s ease,color .3s ease,box-shadow .3s ease;
+}
+.scan-row span:last-child{text-align:right}
+.scan-row.is-scanning{
+  background:#F3F5FD;color:var(--ink);box-shadow:inset 0 0 0 1px var(--pen-blue);
+}
+.scan-row.is-read{color:var(--ink);background:#F5F9F3}
+.scan-row.is-read span:first-child{position:relative;padding-left:16px}
+.scan-row.is-read span:first-child::before{
+  content:"✓";position:absolute;left:0;color:var(--ok);font-size:11px;
+}
+.scan-row.is-head{
+  font-family:"Zen Kaku Gothic New",sans-serif;font-size:11px;font-weight:700;
+  letter-spacing:.1em;color:var(--ink-3);border-bottom:1px solid var(--line);border-radius:0;
+}
+
+.steps{list-style:none;display:flex;flex-direction:column;gap:4px;margin-bottom:28px}
+.step{
+  display:flex;align-items:center;gap:14px;padding:13px 14px;border-radius:8px;
+  color:var(--ink-3);transition:background .3s ease,color .3s ease;
+}
+.step .check{width:26px;height:26px;flex:none;position:relative}
+.step .check .ring{position:absolute;inset:0;border:2px solid #D5D2C6;border-radius:50%;background:#fff}
+.step .check .tick{position:absolute;inset:0;display:none;transform:rotate(-6deg)}
+.step.is-active{background:#F3F5FD;color:var(--ink)}
+.step.is-active .ring{border-color:var(--pen-blue);border-top-color:transparent;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.step.is-done{color:var(--ink)}
+.step.is-done .ring{display:none}
+.step.is-done .tick{display:block}
+.step .step-label{font-weight:700;font-size:15px}
+.step .step-sub{margin-left:auto;font-size:12.5px;color:var(--ink-3)}
+.step.is-done .step-sub{color:var(--ok)}
+
+.log{
+  background:#232B42;border-radius:var(--radius);padding:16px 18px;
+  font-family:"IBM Plex Mono",Menlo,monospace;font-size:12px;line-height:1.9;
+  color:#C8D2F2;min-height:150px;
+}
+.log .log-line{opacity:0;animation:logIn .3s ease forwards}
+.log .log-time{color:#6E7BA6;margin-right:10px}
+.log .log-ok{color:#7BD8A0}
+@keyframes logIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.progress-done{display:none;margin-top:26px;text-align:center}
+.progress-done.is-shown{display:block;animation:fadeUp .4s ease both}
+.progress-done p{font-size:14px;color:var(--ink-2);margin-bottom:14px}
+
+/* ---------- 結果ダッシュボード ---------- */
+.result-head{margin:32px 0 22px;display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.result-head h2{font-size:30px;font-weight:700;letter-spacing:.03em}
+.result-head .result-date{font-size:13px;color:var(--ink-3)}
+
+.subject-tabs{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:22px}
+.subject-tab{
+  all:unset;cursor:pointer;display:flex;align-items:center;gap:12px;
+  background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+  padding:12px 18px;transition:border-color .2s ease,box-shadow .2s ease;
+}
+.subject-tab:hover{border-color:#B9BEA8}
+.subject-tab:focus-visible{outline:2px solid var(--pen-blue);outline-offset:2px}
+.subject-tab[aria-selected="true"]{border-color:var(--ink);box-shadow:0 2px 0 var(--ink)}
+.subject-tab .s-name{font-weight:700;font-size:15px}
+.subject-tab .s-meta{font-size:12px;color:var(--ink-2);display:flex;gap:8px;align-items:center}
+.grade-badge{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:26px;height:26px;border-radius:6px;background:var(--ink);color:#fff;
+  font-family:"Fraunces",serif;font-weight:700;font-size:15px;
+}
+.risk-chip{font-size:12px;font-weight:700}
+.risk-chip[data-level="low"]{color:var(--ok)}
+.risk-chip[data-level="mid"]{color:var(--warn)}
+.risk-chip[data-level="high"]{color:var(--red-pen)}
+
+.grid-top{display:grid;grid-template-columns:1.15fr 1fr 1fr;gap:18px;margin-bottom:18px}
+.card{
+  background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+  padding:22px 24px;box-shadow:0 1px 3px rgba(28,36,56,.05);
+}
+.card h3{font-size:13px;font-weight:700;letter-spacing:.14em;color:var(--ink-2);margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.card h3 .hint{font-weight:400;letter-spacing:0;color:var(--ink-3);font-size:11.5px;margin-left:auto}
+
+/* 落胆予報ゲージ */
+.gauge-card{display:flex;flex-direction:column}
+.gauge-box{position:relative;flex:1;display:flex;align-items:center;justify-content:center}
+.gauge{width:100%;max-width:270px;height:auto;display:block}
+.gauge-center{
+  position:absolute;left:50%;bottom:8%;transform:translateX(-50%);
+  text-align:center;pointer-events:none;
+}
+.gauge-center .g-num{font-size:58px;font-weight:700;line-height:1;color:var(--ink)}
+.gauge-center .g-unit{font-size:16px;color:var(--ink-2);font-weight:500;margin-left:2px}
+.gauge-center .g-label{font-size:12px;letter-spacing:.18em;color:var(--ink-3);margin-top:2px}
+.gauge-comment{font-size:13.5px;color:var(--ink-2);border-top:1px dashed var(--line);padding-top:12px;margin-top:6px}
+.gauge-comment strong{color:var(--ink)}
+
+/* 予測サマリー */
+.summary-rows{display:flex;flex-direction:column;gap:0}
+.sum-row{padding:10px 0;border-bottom:1px dashed var(--line)}
+.sum-row:last-child{border-bottom:none}
+.sum-row .sum-label{font-size:12.5px;color:var(--ink-2)}
+.sum-row .sum-value{font-size:26px;font-weight:700;line-height:1.25}
+.sum-row .sum-value small{font-size:14px;color:var(--ink-3);font-weight:500;margin-left:4px}
+.sum-row .sum-sub{font-size:12px;color:var(--ink-3)}
+.grade-letter-big{
+  font-size:52px;font-weight:700;line-height:1;
+}
+.sum-grade-row{display:flex;align-items:center;gap:14px}
+
+/* 落胆の要因 */
+.factors{list-style:none;display:flex;flex-direction:column;gap:12px}
+.factors li{display:flex;gap:10px;font-size:13.5px;line-height:1.55;color:var(--ink-2)}
+.factors li strong{color:var(--ink)}
+.f-icon{flex:none;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;margin-top:2px}
+.factors li[data-tone="bad"] .f-icon{background:var(--red-pen)}
+.factors li[data-tone="warn"] .f-icon{background:var(--warn)}
+.factors li[data-tone="good"] .f-icon{background:var(--ok)}
+
+/* 採点基準 + 成績 */
+.criteria-card{margin-bottom:18px}
+.weight-bar{display:flex;height:26px;border-radius:6px;overflow:hidden;gap:2px;margin-bottom:6px}
+.weight-bar .seg{position:relative;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11.5px;font-weight:700}
+.weight-bar .seg span{position:relative;z-index:1}
+.seg.pending{
+  background-image:repeating-linear-gradient(-45deg,#0E8F85 0 6px,rgba(255,255,255,.45) 6px 12px);
+}
+.weight-axis{display:flex;justify-content:space-between;font-size:10.5px;color:var(--ink-3);margin-bottom:18px;font-family:"IBM Plex Mono",monospace}
+
+table.criteria{width:100%;border-collapse:collapse;font-size:14px}
+table.criteria th{
+  text-align:left;font-size:11.5px;font-weight:700;letter-spacing:.1em;color:var(--ink-3);
+  padding:8px 10px;border-bottom:2px solid var(--ink);
+}
+table.criteria td{padding:13px 10px;border-bottom:1px solid #EEECE2;vertical-align:middle}
+table.criteria tr:last-child td{border-bottom:none}
+.item-cell{display:flex;align-items:center;gap:9px;font-weight:500}
+.item-chip{width:11px;height:11px;border-radius:3px;flex:none}
+.w-cell{font-family:"Fraunces",serif;font-weight:600}
+.score-cell{min-width:170px}
+.score-track{position:relative;height:10px;background:#EFEDF4;border-radius:5px;overflow:hidden;margin-bottom:5px}
+.score-fill{height:100%;border-radius:5px}
+.score-line{display:flex;justify-content:space-between;font-size:12px;color:var(--ink-2)}
+.score-line .pts{font-family:"Fraunces",serif;font-weight:600;color:var(--ink)}
+.pending-pill{
+  display:inline-block;font-size:11.5px;font-weight:700;color:#fff;background:#0E8F85;
+  border-radius:20px;padding:1px 10px;
+}
+.score-sub{font-size:11.5px;color:var(--ink-3)}
+.tr-total td{border-top:2px solid var(--ink);font-weight:700}
+
+/* 小テスト推移チャート */
+.quiz-chart-card .chart-meta{display:flex;gap:18px;font-size:12px;color:var(--ink-2);margin-top:10px;flex-wrap:wrap}
+.chart-meta .m-key{display:flex;align-items:center;gap:6px}
+.chart-meta .m-chip{width:14px;height:3px;border-radius:2px;background:var(--pen-blue)}
+.chart-meta .m-avg{width:14px;height:0;border-top:2px dashed var(--ink-3)}
+.quiz-chart{width:100%;height:auto;display:block}
+.qc-grid{stroke:#EFEDF4;stroke-width:1}
+.qc-axis-label{font-size:10px;fill:var(--ink-3);font-family:"IBM Plex Mono",monospace}
+.qc-line{fill:none;stroke:var(--pen-blue);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+.qc-dot{fill:#fff;stroke:var(--pen-blue);stroke-width:2}
+.qc-hit{fill:transparent}
+.qc-value{font-size:10.5px;fill:var(--ink-2);font-family:"Fraunces",serif;font-weight:600}
+.qc-avg{stroke:var(--ink-3);stroke-width:1.5;stroke-dasharray:5 4}
+
+.result-actions{display:flex;gap:12px;margin-top:26px;flex-wrap:wrap}
+.btn-ghost{
+  all:unset;cursor:pointer;font-size:14px;font-weight:700;color:var(--ink-2);
+  border:1px solid var(--line);border-radius:8px;padding:12px 22px;background:var(--card);
+  transition:border-color .2s ease,color .2s ease;
+}
+.btn-ghost:hover{border-color:var(--ink);color:var(--ink)}
+.btn-ghost:focus-visible{outline:2px solid var(--pen-blue);outline-offset:2px}
+
+.site-footer{
+  max-width:1080px;margin:0 auto;padding:0 24px 40px;
+  font-size:11.5px;color:var(--ink-3);
+}
+
+/* ---------- レスポンシブ ---------- */
+@media (max-width: 900px){
+  .grid-top{grid-template-columns:1fr}
+}
+@media (max-width: 600px){
+  .hero{margin-top:40px}
+  .sheet-card{flex-wrap:wrap}
+  .sheet-status{margin-left:0;width:100%}
+  .score-cell{min-width:130px}
+  table.criteria th:nth-child(4), table.criteria td:nth-child(4){display:none}
+}
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="logo">
+    <button type="button" data-goto="start" aria-label="落胆予報 最初の画面へ">
+      <svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true">
+        <path d="M4 22 A11 11 0 0 1 26 22" fill="none" stroke="#1C2438" stroke-width="2.5"/>
+        <path d="M4 22 A11 11 0 0 1 12 11.6" fill="none" stroke="#2E7D52" stroke-width="2.5"/>
+        <path d="M12 11.6 A11 11 0 0 1 19.5 12.8" fill="none" stroke="#B57A10" stroke-width="2.5"/>
+        <path d="M19.5 12.8 A11 11 0 0 1 26 22" fill="none" stroke="#D6402F" stroke-width="2.5"/>
+        <line x1="15" y1="22" x2="8.5" y2="15.5" stroke="#D6402F" stroke-width="2.5" stroke-linecap="round"/>
+      </svg>
+      <span>落胆予報</span>
+    </button>
+  </div>
+  <div class="semester"><span class="dot-ok" aria-hidden="true"></span>2026年度 前学期 ・ 成績シート接続済み</div>
+</header>
+
+<main>
+  <!-- ============ 画面1: 開始 ============ -->
+  <section class="screen is-active" id="screen-start" aria-label="成績の収集 開始">
+    <div class="hero">
+      <p class="eyebrow">学期途中の成績予報ツール</p>
+      <h1>期末の自分、<br><span class="accent">予報</span>します。</h1>
+      <p class="lead">
+        接続したスプレッドシートの成績と、授業ごとの採点基準から、
+        いまの時点での評価と「期末に落胆する確率」を予測します。
+      </p>
+
+      <div class="sheet-card">
+        <div class="sheet-icon" aria-hidden="true">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <rect x="3" y="4" width="18" height="16" rx="2" fill="#2E7D52" opacity=".18"/>
+            <rect x="3" y="4" width="18" height="16" rx="2" stroke="#2E7D52" stroke-width="1.6"/>
+            <path d="M3 9h18M9 9v11M15 9v11" stroke="#2E7D52" stroke-width="1.4"/>
+          </svg>
+        </div>
+        <div>
+          <div class="sheet-name">成績管理スプレッドシート「2026年度 前学期_成績」</div>
+          <div class="sheet-meta">小テスト 21件 ・ 課題 11件 ・ 中間試験 3科目分</div>
+        </div>
+        <div class="sheet-status"><span class="dot-ok" aria-hidden="true"></span>接続済み</div>
+      </div>
+
+      <button class="btn-primary" type="button" data-goto="progress">
+        成績の収集を開始 <span class="arrow" aria-hidden="true">→</span>
+      </button>
+      <p class="hero-note">※ この画面はデモ用モックです。実際の成績データは送信されません。</p>
+    </div>
+  </section>
+
+  <!-- ============ 画面2: AI収集処理 ============ -->
+  <section class="screen" id="screen-progress" aria-label="成績の収集処理中">
+    <div class="progress-wrap">
+      <div class="progress-head">
+        <h2>成績を収集しています…</h2>
+        <div class="progress-pct num" id="pct">0%</div>
+      </div>
+      <div class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="pbar"><span id="pbar-fill"></span></div>
+
+      <p class="ai-status" aria-live="polite">
+        <span class="ai-orb" aria-hidden="true"></span>
+        <span id="ai-status-text">AIがスプレッドシートに接続しています…</span>
+      </p>
+
+      <ol class="steps" id="steps">
+        <li class="step" data-step>
+          <span class="check" aria-hidden="true">
+            <span class="ring"></span>
+            <svg class="tick" width="26" height="26" viewBox="0 0 26 26">
+              <circle cx="13" cy="13" r="11" fill="none" stroke="#D6402F" stroke-width="2"/>
+              <path d="M7.5 13.5 L11.5 17.5 L18.5 9" fill="none" stroke="#D6402F" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </span>
+          <span class="step-label">スプレッドシートに接続</span>
+          <span class="step-sub" data-sub></span>
+        </li>
+        <li class="step" data-step>
+          <span class="check" aria-hidden="true"><span class="ring"></span>
+            <svg class="tick" width="26" height="26" viewBox="0 0 26 26">
+              <circle cx="13" cy="13" r="11" fill="none" stroke="#D6402F" stroke-width="2"/>
+              <path d="M7.5 13.5 L11.5 17.5 L18.5 9" fill="none" stroke="#D6402F" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </span>
+          <span class="step-label">成績データを取得</span>
+          <span class="step-sub" data-sub></span>
+        </li>
+        <li class="step" data-step>
+          <span class="check" aria-hidden="true"><span class="ring"></span>
+            <svg class="tick" width="26" height="26" viewBox="0 0 26 26">
+              <circle cx="13" cy="13" r="11" fill="none" stroke="#D6402F" stroke-width="2"/>
+              <path d="M7.5 13.5 L11.5 17.5 L18.5 9" fill="none" stroke="#D6402F" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </span>
+          <span class="step-label">採点基準を解析</span>
+          <span class="step-sub" data-sub></span>
+        </li>
+        <li class="step" data-step>
+          <span class="check" aria-hidden="true"><span class="ring"></span>
+            <svg class="tick" width="26" height="26" viewBox="0 0 26 26">
+              <circle cx="13" cy="13" r="11" fill="none" stroke="#D6402F" stroke-width="2"/>
+              <path d="M7.5 13.5 L11.5 17.5 L18.5 9" fill="none" stroke="#D6402F" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </span>
+          <span class="step-label">現時点の合計点を計算</span>
+          <span class="step-sub" data-sub></span>
+        </li>
+        <li class="step" data-step>
+          <span class="check" aria-hidden="true"><span class="ring"></span>
+            <svg class="tick" width="26" height="26" viewBox="0 0 26 26">
+              <circle cx="13" cy="13" r="11" fill="none" stroke="#D6402F" stroke-width="2"/>
+              <path d="M7.5 13.5 L11.5 17.5 L18.5 9" fill="none" stroke="#D6402F" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </span>
+          <span class="step-label">期末までの成績を予測</span>
+          <span class="step-sub" data-sub></span>
+        </li>
+      </ol>
+
+      <div class="scan-sheet" id="scan-sheet" aria-hidden="true">
+        <div class="sheet-scan-title"><span class="rec"></span>AI READS — 2026年度 前学期_成績</div>
+        <div class="scan-row is-head"><span>授業</span><span>種別</span><span>点数</span></div>
+        <div class="scan-row" data-scan><span>統計学</span><span>小テスト 第9回</span><span>72</span></div>
+        <div class="scan-row" data-scan><span>統計学</span><span>課題 第3回</span><span>92</span></div>
+        <div class="scan-row" data-scan><span>統計学</span><span>中間試験</span><span>78</span></div>
+        <div class="scan-row" data-scan><span>アルゴリズム論</span><span>小テスト 第10回</span><span>86</span></div>
+        <div class="scan-row" data-scan><span>アルゴリズム論</span><span>課題 第4回</span><span>95</span></div>
+        <div class="scan-row" data-scan><span>マーケティング論</span><span>小テスト 第8回</span><span>56</span></div>
+        <div class="scan-row" data-scan><span>マーケティング論</span><span>中間試験</span><span>62</span></div>
+      </div>
+
+      <div class="log" id="log" aria-live="polite"></div>
+
+      <div class="progress-done" id="progress-done">
+        <p>収集が完了しました。3科目ぶんの成績と採点基準を読み込みました。</p>
+        <button class="btn-primary" type="button" data-goto="result">結果を見る <span class="arrow" aria-hidden="true">→</span></button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 画面3: 結果ダッシュボード ============ -->
+  <section class="screen" id="screen-result" aria-label="成績予報の結果">
+    <div class="result-head">
+      <h2>あなたの成績予報</h2>
+      <div class="result-date mono" id="result-date"></div>
+    </div>
+
+    <div class="subject-tabs" role="tablist" aria-label="授業の選択" id="subject-tabs"></div>
+
+    <div class="grid-top">
+      <!-- 落胆予報ゲージ -->
+      <div class="card gauge-card">
+        <h3>落胆予報 <span class="hint">期末で評価が期待を下回る確率</span></h3>
+        <div class="gauge-box">
+          <svg class="gauge" viewBox="0 0 260 158" role="img" aria-labelledby="gauge-desc">
+            <title id="gauge-desc">落胆する確率のゲージ。緑は低い、琥珀はあり、赤は高い。</title>
+            <!-- ゾーン(低い/あり/高い) -->
+            <path d="M 30 130 A 100 100 0 0 1 71.2 49.1" fill="none" stroke="#2E7D52" stroke-width="15" opacity=".85"/>
+            <path d="M 71.2 49.1 A 100 100 0 0 1 160.9 34.9" fill="none" stroke="#B57A10" stroke-width="15" opacity=".85"/>
+            <path d="M 160.9 34.9 A 100 100 0 0 1 230 130" fill="none" stroke="#D6402F" stroke-width="15" opacity=".85"/>
+            <!-- ゾーン境界 ticks -->
+            <line x1="71.2" y1="49.1" x2="66.8" y2="41.4" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+            <line x1="160.9" y1="34.9" x2="163.4" y2="26.5" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+            <!-- 針 -->
+            <g id="needle" style="transform:rotate(-57.6deg);transform-origin:130px 130px;transition:transform 1.2s cubic-bezier(.2,.8,.25,1)">
+              <line x1="130" y1="130" x2="52" y2="130" stroke="#1C2438" stroke-width="3" stroke-linecap="round"/>
+              <circle cx="130" cy="130" r="6" fill="#1C2438"/>
+            </g>
+            <!-- ゾーンラベル -->
+            <text x="30" y="150" text-anchor="middle" class="qc-axis-label">低い</text>
+            <text x="130" y="20" text-anchor="middle" class="qc-axis-label">あり</text>
+            <text x="230" y="150" text-anchor="middle" class="qc-axis-label">高い</text>
+          </svg>
+          <div class="gauge-center">
+            <div><span class="g-num num" id="gauge-num">32</span><span class="g-unit">%</span></div>
+            <div class="g-label">落胆する確率</div>
+          </div>
+        </div>
+        <p class="gauge-comment" id="gauge-comment"></p>
+      </div>
+
+      <!-- 予測サマリー -->
+      <div class="card">
+        <h3>見込み <span class="hint" id="sum-teacher"></span></h3>
+        <div class="summary-rows">
+          <div class="sum-row">
+            <div class="sum-label">予測最終成績</div>
+            <div class="sum-value"><span class="num" id="sum-forecast">–</span><small>/ 100点</small></div>
+          </div>
+          <div class="sum-row sum-grade-row">
+            <div>
+              <div class="sum-label">予測評価</div>
+              <div class="grade-letter-big num" id="sum-grade">–</div>
+            </div>
+            <div class="sum-sub" id="sum-sec"></div>
+          </div>
+          <div class="sum-row">
+            <div class="sum-label">現在確定分</div>
+            <div class="sum-value"><span class="num" id="sum-secured">–</span><small id="sum-secured-max">/ –点</small></div>
+            <div class="sum-sub" id="sum-secured-sub"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 落胆の要因 -->
+      <div class="card">
+        <h3>落胆の要因 <span class="hint">予測の根拠</span></h3>
+        <ul class="factors" id="factors"></ul>
+      </div>
+    </div>
+
+    <!-- 採点基準と成績 -->
+    <div class="card criteria-card">
+      <h3>採点基準とあなたの成績 <span class="hint" id="criteria-hint"></span></h3>
+      <div class="weight-bar" id="weight-bar" role="img" aria-label="配点の構成"></div>
+      <div class="weight-axis"><span>0%</span><span>配点の構成(横棒=期末配点)</span><span>100%</span></div>
+      <table class="criteria">
+        <thead>
+          <tr><th scope="col">評価項目</th><th scope="col">配点</th><th scope="col">あなたの成績</th><th scope="col">獲得点</th></tr>
+        </thead>
+        <tbody id="criteria-body"></tbody>
+      </table>
+    </div>
+
+    <!-- 小テスト推移 -->
+    <div class="card quiz-chart-card">
+      <h3>小テストの推移 <span class="hint" id="quiz-hint"></span></h3>
+      <svg class="quiz-chart" id="quiz-chart" viewBox="0 0 640 190" role="img" aria-label="小テストの点数推移"></svg>
+      <div class="chart-meta">
+        <span class="m-key"><span class="m-chip" aria-hidden="true"></span>各回の点数</span>
+        <span class="m-key"><span class="m-avg" aria-hidden="true"></span>平均 <span class="num" id="quiz-avg"></span>点</span>
+      </div>
+    </div>
+
+    <div class="result-actions">
+      <button class="btn-ghost" type="button" data-goto="progress">もう一度収集する</button>
+      <button class="btn-ghost" type="button" data-goto="start">最初の画面へ</button>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  落胆予報 — CTCハッカソン用UIモック。表示中の成績・確率はすべてダミーデータです。
+</footer>
+
+<script>
+/* ================= ダミーデータ ================= */
+const SUBJECTS = [
+  {
+    id:'stat', name:'統計学', teacher:'山田教授',
+    risk:32,
+    criteria:[
+      {item:'中間試験', type:'mid',  weight:30, score:78,  done:true},
+      {item:'期末試験', type:'fin',  weight:40, score:null, done:false, forecast:72},
+      {item:'課題',     type:'kadai',weight:20, score:92,  done:true},
+      {item:'小テスト', type:'quiz', weight:10, score:68,  done:true},
+    ],
+    quizzes:[58,66,62,71,68,74,70,64,72,68,70,71],
+    comment:'<strong>やや低め。</strong>課題は好調でも、小テストの平均が評価Bのボーダー付近。期末に向けて演習問題を週2回に増すと確率が下がります。',
+    factors:[
+      {tone:'bad',  text:'<strong>期末試験(配点40%)が未実施</strong> — 最大の不確定要素'},
+      {tone:'warn', text:'小テストの平均<strong>68点</strong>はB評価ライン(70点)を下回る'},
+      {tone:'good', text:'課題は<strong>92点</strong>で安定して高得点'},
+    ],
+  },
+  {
+    id:'algo', name:'アルゴリズム論', teacher:'鈴木教授',
+    risk:12,
+    criteria:[
+      {item:'中間試験', type:'mid',  weight:35, score:88,  done:true},
+      {item:'期末試験', type:'fin',  weight:35, score:null, done:false, forecast:84},
+      {item:'課題',     type:'kadai',weight:20, score:95,  done:true},
+      {item:'小テスト', type:'quiz', weight:10, score:85,  done:true},
+    ],
+    quizzes:[78,84,80,88,82,86,90,84,88,86,87,89],
+    comment:'<strong>低め。</strong>すべての項目でA評価ラインを上回るペース。この調子を維持すれば期末も安心です。',
+    factors:[
+      {tone:'good', text:'中間試験<strong>88点</strong>・課題<strong>95点</strong>と好調'},
+      {tone:'good', text:'小テストの平均<strong>85点</strong>で安定'},
+      {tone:'warn', text:'期末試験(配点35%)が未実施 — 得意分野のため影響は小さい見込み'},
+    ],
+  },
+  {
+    id:'marke', name:'マーケティング論', teacher:'佐藤教授',
+    risk:58,
+    criteria:[
+      {item:'中間試験', type:'mid',  weight:25, score:62,  done:true},
+      {item:'期末試験', type:'fin',  weight:45, score:null, done:false, forecast:62},
+      {item:'課題',     type:'kadai',weight:20, score:70,  done:true},
+      {item:'小テスト', type:'quiz', weight:10, score:58,  done:true},
+    ],
+    quizzes:[64,58,62,55,60,57,63,56,60,58,61,57],
+    comment:'<strong>高め。</strong>配点45%の期末が未実施で、現時点の点数も伸び悩んでいます。過去問演習を早めに始めるのが最優先。',
+    factors:[
+      {tone:'bad',  text:'<strong>期末試験(配点45%)が未実施</strong> — 科目最大の配点'},
+      {tone:'bad',  text:'小テストの平均<strong>58点</strong>、中間も<strong>62点</strong>と苦手傾向'},
+      {tone:'good', text:'課題はすべて提出済みで<strong>70点</strong>を確保'},
+    ],
+  },
+];
+const TYPE_COLOR = { mid:'#3B4FC4', fin:'#0E8F85', kadai:'#B57A10', quiz:'#8E4FA8' };
+const gradeOf = s => s>=80?'A':s>=70?'B':s>=60?'C':s>=50?'D':'F';
+const riskLevel = r => r<30?'low':r<60?'mid':'high';
+
+function calc(s){
+  let secured=0, securedMax=0, forecast=0;
+  for(const c of s.criteria){
+    if(c.done){ secured+=c.weight*c.score/100; securedMax+=c.weight; forecast+=c.weight*c.score/100; }
+    else forecast+=c.weight*c.forecast/100;
+  }
+  return {secured, securedMax, forecast};
+}
+const avg = a => a.reduce((x,y)=>x+y,0)/a.length;
+const fmt1 = n => (Math.round(n*10)/10).toString();
+
+/* ================= 画面切替 ================= */
+const screens = { start:'screen-start', progress:'screen-progress', result:'screen-result' };
+let timers = [];
+function clearTimers(){ timers.forEach(id=>{clearTimeout(id);clearInterval(id);}); timers=[]; }
+function goto(name){
+  clearTimers();
+  for(const k in screens){
+    document.getElementById(screens[k]).classList.toggle('is-active', k===name);
+  }
+  window.scrollTo({top:0});
+  if(name==='progress') runCollection();
+  if(name==='result'){ renderResult(activeSubject); }
+}
+document.querySelectorAll('[data-goto]').forEach(btn=>{
+  btn.addEventListener('click', ()=>goto(btn.dataset.goto));
+});
+
+/* ================= 収集処理アニメーション ================= */
+const STEPS = [
+  { label:'スプレッドシートに接続', sub:'ok', logs:[
+    ['接続先: 成績管理スプレッドシート', 0],
+  ]},
+  { label:'成績データを取得', sub:'35件', logs:[
+    ['小テスト 21件 を取得', 1],
+    ['課題 11件 を取得', 1],
+    ['中間試験 3科目分 を取得', 1],
+  ]},
+  { label:'採点基準を解析', sub:'3授業', logs:[
+    ['統計学: 中間30% / 期末40% / 課題20% / 小テスト10%', 1],
+    ['アルゴリズム論: 中間35% / 期末35% / 課題20% / 小テスト10%', 1],
+    ['マーケティング論: 中間25% / 期末45% / 課題20% / 小テスト10%', 1],
+  ]},
+  { label:'現時点の合計点を計算', sub:'3授業', logs:[
+    ['科目ごとの獲得点を集計', 1],
+  ]},
+  { label:'期末までの成績を予測', sub:'完了', logs:[
+    ['過去3学期の推移から期末得点を推定', 1],
+    ['落胆確率を算出 … done', 2],
+  ]},
+];
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+const AI_STATUS = [
+  'AIがスプレッドシートに接続しています…',
+  'AIが成績行を順に読み込んでいます…',
+  'AIがシラバスから採点基準を解析しています…',
+  '配点に従って獲得点を計算しています…',
+  '過去3学期の推移から期末成績を予測しています…',
+];
+
+function runCollection(){
+  const stepEls=[...document.querySelectorAll('[data-step]')];
+  const scanRows=[...document.querySelectorAll('[data-scan]')];
+  const log=document.getElementById('log');
+  const fill=document.getElementById('pbar-fill');
+  const pbar=document.getElementById('pbar');
+  const pct=document.getElementById('pct');
+  const doneBox=document.getElementById('progress-done');
+  const statusText=document.getElementById('ai-status-text');
+  stepEls.forEach(el=>el.classList.remove('is-active','is-done'));
+  scanRows.forEach(r=>r.classList.remove('is-scanning','is-read'));
+  log.innerHTML=''; fill.style.width='0%'; pct.textContent='0%';
+  doneBox.classList.remove('is-shown');
+  statusText.textContent=AI_STATUS[0];
+
+  const stepDur = reduced ? 0 : 1100;
+  const total = STEPS.length * stepDur;
+
+  /* 滑らかに加算する進捗カウンタ(目標値へゆっくり追いつく) */
+  let pctTarget=0, pctShown=0;
+  const tick=setInterval(()=>{
+    if(pctShown < pctTarget){
+      pctShown = Math.min(pctTarget, pctShown + Math.max(1, (pctTarget-pctShown)*0.12));
+      const v=Math.round(pctShown);
+      fill.style.width=v+'%'; pbar.setAttribute('aria-valuenow',v); pct.textContent=v+'%';
+    }
+  }, 60);
+  timers.push(tick);
+  const setPct = p => { pctTarget = p; if(reduced){ pctShown=p; const v=p; fill.style.width=v+'%'; pbar.setAttribute('aria-valuenow',v); pct.textContent=v+'%'; } };
+
+  const addLog = (text, kind) => {
+    const line=document.createElement('div');
+    line.className='log-line';
+    const now=new Date();
+    const hh=String(now.getHours()).padStart(2,'0'), mm=String(now.getMinutes()).padStart(2,'0'), ss=String(now.getSeconds()).padStart(2,'0');
+    line.innerHTML=`<span class="log-time">${hh}:${mm}:${ss}</span>${text}${kind?' <span class="log-ok">✓</span>':''}`;
+    log.appendChild(line);
+  };
+
+  /* 成績シートの行を順にスキャン */
+  scanRows.forEach((row,i)=>{
+    const at = reduced ? 0 : 350 + i*(total-500)/scanRows.length;
+    timers.push(setTimeout(()=>{
+      row.classList.add('is-scanning');
+      timers.push(setTimeout(()=>{ row.classList.remove('is-scanning'); row.classList.add('is-read'); }, reduced?0:300));
+    }, at));
+  });
+
+  let t = 0;
+  STEPS.forEach((st,i)=>{
+    timers.push(setTimeout(()=>{
+      stepEls[i].classList.add('is-active');
+      statusText.textContent = AI_STATUS[i];
+      /* 文言にふき出し風の再出現アニメーション */
+      statusText.style.animation='none'; void statusText.offsetWidth; statusText.style.animation='';
+      setPct(Math.round((i)/STEPS.length*100)+6);
+      st.logs.forEach((lg,j)=>timers.push(setTimeout(()=>addLog(lg[0],lg[1]), (reduced?0:150)*(j+1))));
+    }, t));
+    t += stepDur;
+    timers.push(setTimeout(()=>{
+      stepEls[i].classList.remove('is-active');
+      stepEls[i].classList.add('is-done');
+      stepEls[i].querySelector('[data-sub]').textContent = st.sub;
+      setPct(Math.round((i+1)/STEPS.length*100));
+    }, t));
+  });
+
+  timers.push(setTimeout(()=>{
+    statusText.textContent='収集が完了しました。結果をまとめています…';
+    setPct(100);
+    doneBox.classList.add('is-shown');
+    if(!reduced) timers.push(setTimeout(()=>goto('result'), 1800));
+  }, t+200));
+}
+
+/* ================= 結果ダッシュボード ================= */
+let activeSubject = SUBJECTS[0];
+
+function renderTabs(){
+  const tabs=document.getElementById('subject-tabs');
+  tabs.innerHTML='';
+  SUBJECTS.forEach(s=>{
+    const c=calc(s);
+    const b=document.createElement('button');
+    b.className='subject-tab'; b.type='button'; b.setAttribute('role','tab');
+    b.setAttribute('aria-selected', s===activeSubject);
+    b.innerHTML=`
+      <span class="grade-badge num">${gradeOf(c.forecast)}</span>
+      <span>
+        <span class="s-name">${s.name}</span><br>
+        <span class="s-meta">予測 ${fmt1(c.forecast)}点
+          <span class="risk-chip" data-level="${riskLevel(s.risk)}">落胆${s.risk}%</span>
+        </span>
+      </span>`;
+    b.addEventListener('click',()=>{ activeSubject=s; renderResult(s); });
+    tabs.appendChild(b);
+  });
+}
+
+function renderGauge(s){
+  const needle=document.getElementById('needle');
+  needle.style.transform=`rotate(${-1.8*s.risk}deg)`;
+  const numEl=document.getElementById('gauge-num');
+  numEl.textContent=s.risk;
+  document.getElementById('gauge-comment').innerHTML=s.comment;
+}
+
+function renderQuizChart(s){
+  const svg=document.getElementById('quiz-chart');
+  const W=640,H=190,PAD_L=36,PAD_R=16,PAD_T=16,PAD_B=26;
+  const data=s.quizzes, min=50, max=100;
+  const X=i=>PAD_L+(W-PAD_L-PAD_R)*(i/(data.length-1));
+  const Y=v=>PAD_T+(H-PAD_T-PAD_B)*(1-(v-min)/(max-min));
+  const a=avg(data);
+  let out='';
+  [50,75,100].forEach(v=>{
+    out+=`<line class="qc-grid" x1="${PAD_L}" y1="${Y(v)}" x2="${W-PAD_R}" y2="${Y(v)}"/>`;
+    out+=`<text class="qc-axis-label" x="${PAD_L-8}" y="${Y(v)+3}" text-anchor="end">${v}</text>`;
+  });
+  out+=`<text class="qc-axis-label" x="${PAD_L}" y="${H-8}">4月</text>`;
+  out+=`<text class="qc-axis-label" x="${W-PAD_R}" y="${H-8}" text-anchor="end">7月</text>`;
+  // 平均線
+  out+=`<line class="qc-avg" x1="${PAD_L}" y1="${Y(a)}" x2="${W-PAD_R}" y2="${Y(a)}"/>`;
+  // 折れ線
+  const path=data.map((v,i)=>`${i?'L':'M'}${X(i).toFixed(1)} ${Y(v).toFixed(1)}`).join(' ');
+  out+=`<path class="qc-line" d="${path}"/>`;
+  const minIdx=data.indexOf(Math.min(...data));
+  data.forEach((v,i)=>{
+    out+=`<circle class="qc-dot" cx="${X(i).toFixed(1)}" cy="${Y(v).toFixed(1)}" r="3.5"/>`;
+    out+=`<circle class="qc-hit" cx="${X(i).toFixed(1)}" cy="${Y(v).toFixed(1)}" r="12"><title>第${i+1}回 ${v}点</title></circle>`;
+  });
+  // 選択的直接ラベル(最初・最低・最後 / 重複インデックスは1回だけ)
+  [...new Set([0,minIdx,data.length-1])].forEach(i=>{
+    const anchor = i===0?'start':i===data.length-1?'end':'middle';
+    const dy = i===minIdx?16:-8;
+    out+=`<text class="qc-value" x="${X(i).toFixed(1)}" y="${Y(data[i]).toFixed(1)+dy}" text-anchor="${anchor}">${data[i]}</text>`;
+  });
+  svg.innerHTML=out;
+  document.getElementById('quiz-avg').textContent=Math.round(a);
+  document.getElementById('quiz-hint').textContent=`全${data.length}回・満点各100点`;
+}
+
+function renderResult(s){
+  renderTabs();
+  const c=calc(s);
+  // 日付
+  const now=new Date();
+  document.getElementById('result-date').textContent=
+    `${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日 ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')} 収集`;
+  renderGauge(s);
+  // サマリー
+  document.getElementById('sum-teacher').textContent=s.teacher;
+  document.getElementById('sum-forecast').textContent=fmt1(c.forecast);
+  const g=gradeOf(c.forecast);
+  document.getElementById('sum-grade').textContent=g;
+  const nextLine = g==='A' ? 'A評価を維持する見込み' : `${String.fromCharCode(g.charCodeAt(0)+1)}評価まであと ${fmt1(({'B':70,'C':60,'D':50,'F':50}[g]??80) - c.forecast)}点`;
+  document.getElementById('sum-sec').textContent=nextLine;
+  document.getElementById('sum-secured').textContent=fmt1(c.secured);
+  document.getElementById('sum-secured-max').textContent=`/ ${c.securedMax}点`;
+  const rate=c.securedMax? Math.round(c.secured/c.securedMax*100):0;
+  document.getElementById('sum-secured-sub').textContent=`確定分の取得率 ${rate}%`;
+  // 要因
+  document.getElementById('factors').innerHTML =
+    s.factors.map(f=>`<li data-tone="${f.tone}"><span class="f-icon" aria-hidden="true">${f.tone==='bad'?'!':f.tone==='warn'?'〜':'✓'}</span><span>${f.text}</span></li>`).join('');
+  // 配点バー
+  document.getElementById('weight-bar').innerHTML =
+    s.criteria.map(cr=>`<div class="seg ${cr.done?'':'pending'}" style="background-color:${TYPE_COLOR[cr.type]};flex:${cr.weight}"><span>${cr.weight}</span></div>`).join('');
+  document.getElementById('criteria-hint').textContent=`${s.name}・${s.teacher}`;
+  // 明細行
+  document.getElementById('criteria-body').innerHTML =
+    s.criteria.map(cr=>{
+      if(cr.done){
+        const pts=cr.weight*cr.score/100;
+        return `<tr>
+          <td><span class="item-cell"><span class="item-chip" style="background:${TYPE_COLOR[cr.type]}"></span>${cr.item}</span></td>
+          <td class="w-cell">${cr.weight}%</td>
+          <td class="score-cell">
+            <div class="score-track"><div class="score-fill" style="width:${cr.score}%;background:${TYPE_COLOR[cr.type]}"></div></div>
+            <div class="score-line"><span>100点満点中 <span class="pts">${cr.score}</span>点</span></div>
+          </td>
+          <td class="w-cell">${fmt1(pts)} / ${cr.weight}点</td>
+        </tr>`;
+      }else{
+        return `<tr>
+          <td><span class="item-cell"><span class="item-chip" style="background:${TYPE_COLOR[cr.type]}"></span>${cr.item}</span></td>
+          <td class="w-cell">${cr.weight}%</td>
+          <td class="score-cell">
+            <div class="score-track"><div class="score-fill pending" style="width:${cr.forecast}%;background-image:repeating-linear-gradient(-45deg,${TYPE_COLOR[cr.type]} 0 5px,rgba(255,255,255,.5) 5px 10px)"></div></div>
+            <div class="score-line"><span class="pending-pill">未実施</span> <span class="score-sub">現在の実力から予測 ${cr.forecast}点</span></div>
+          </td>
+          <td class="w-cell">—</td>
+        </tr>`;
+      }
+    }).join('') +
+    `<tr class="tr-total">
+      <td>合計(予測)</td><td class="w-cell">100%</td>
+      <td class="score-cell"><div class="score-sub">確定 ${fmt1(c.secured)}点 + 期末予測 ${fmt1(c.forecast-c.secured)}点</div>
+        <div class="score-track"><div class="score-fill" style="width:${c.forecast}%;background:#1C2438"></div></div>
+      </td>
+      <td class="w-cell">${fmt1(c.forecast)} / 100点</td>
+    </tr>`;
+  renderQuizChart(s);
+}
+
+renderResult(activeSubject);
+
+/* URLハッシュで画面を直接開ける(#screen=progress など) — デモ共有用 */
+if(location.hash){
+  const key = location.hash.replace('#','').replace('screen=','');
+  if(screens[key]) goto(key);
+}
+</script>
+</body>
+</html>
