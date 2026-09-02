@@ -19,7 +19,9 @@ jobs:
       - name: コミットメッセージに @release が含まれるか確認
         id: check
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # MERGE_TOKEN (PAT/GitHub App) があればマージ後のワークフローも発火する。
+          # 未設定の場合は GITHUB_TOKEN にフォールバック（マージはできるが後続ワークフローは発火しない）。
+          GH_TOKEN: ${{ secrets.MERGE_TOKEN || secrets.GITHUB_TOKEN }}
           PR_URL: ${{ github.event.pull_request.html_url }}
         run: |
           COMMIT_MESSAGES=$(gh api \
@@ -36,7 +38,7 @@ jobs:
       - name: 自動マージ
         if: steps.check.outputs.found == 'true'
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.MERGE_TOKEN || secrets.GITHUB_TOKEN }}
           PR_URL: ${{ github.event.pull_request.html_url }}
         run: |
           # --auto: ブランチ保護で即時マージ不可の場合は auto-merge を有効化し、
