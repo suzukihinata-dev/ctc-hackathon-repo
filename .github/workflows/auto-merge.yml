@@ -1,0 +1,44 @@
+name: Auto merge on @release
+
+# PR のコミットメッセージに @release が含まれていたら自動マージする
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  auto-merge:
+    # PR が開いている間のみ実行（closed の synchronize 再トリガー対策）
+    if: github.event.pull_request.state == 'open'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: コミットメッセージに @release が含まれるか確認
+        id: check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        run: |
+          COMMIT_MESSAGES=$(gh api \
+            "repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/commits" \
+            --paginate --jq '.[].commit.message')
+
+          if grep -q '@release' <<< "$COMMIT_MESSAGES"; then
+            echo "@release を含むコミットを検出しました"
+            echo "found=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: 自動マージ
+        if: steps.check.outputs.found == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        run: |
+          # --auto: ブランチ保護で即時マージ不可の場合は auto-merge を有効化し、
+          # 必須チェック通過後に自動でマージされる
+          gh pr merge "$PR_URL" --merge --auto
