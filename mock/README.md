@@ -4,10 +4,6 @@
 
 ## 開き方
 
-デプロイ済み: **https://ochikomi-yohow.vercel.app**
-
-ローカルで開く:
-
 ```bash
 open mock/index.html
 ```
