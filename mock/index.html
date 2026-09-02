@@ -119,8 +119,56 @@ body{
 .progress-head{display:flex;align-items:baseline;justify-content:space-between;gap:16px;margin-bottom:8px}
 .progress-head h2{font-size:24px;font-weight:700}
 .progress-pct{font-size:30px;color:var(--pen-blue)}
-.progress-bar{height:6px;background:#E9E6DB;border-radius:3px;overflow:hidden;margin-bottom:28px}
-.progress-bar span{display:block;height:100%;width:0%;background:var(--pen-blue);border-radius:3px;transition:width .6s ease}
+.progress-bar{height:6px;background:#E9E6DB;border-radius:3px;overflow:hidden;margin-bottom:14px}
+.progress-bar span{display:block;height:100%;width:0%;background:var(--pen-blue);border-radius:3px;transition:width .25s linear}
+
+/* AIステータス行 */
+.ai-status{
+  display:flex;align-items:center;gap:10px;font-size:13.5px;color:var(--ink-2);
+  margin-bottom:22px;min-height:22px;
+}
+.ai-orb{flex:none;width:16px;height:16px;position:relative}
+.ai-orb::before,.ai-orb::after{
+  content:"";position:absolute;inset:0;border-radius:50%;
+  background:radial-gradient(circle at 35% 30%, #7C90E4, var(--pen-blue));
+}
+.ai-orb::after{animation:orbPulse 1.6s ease-out infinite}
+@keyframes orbPulse{
+  0%{transform:scale(1);opacity:.55}
+  100%{transform:scale(2.4);opacity:0}
+}
+#ai-status-text{animation:fadeUp .35s ease both}
+
+/* スキャンシート */
+.scan-sheet{
+  background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+  padding:14px 16px 10px;margin-bottom:20px;overflow:hidden;
+}
+.sheet-scan-title{
+  font-size:11px;font-weight:700;letter-spacing:.14em;color:var(--ink-3);
+  margin-bottom:8px;display:flex;align-items:center;gap:6px;
+}
+.sheet-scan-title .rec{width:7px;height:7px;border-radius:50%;background:var(--red-pen);animation:blink 1s steps(2) infinite}
+@keyframes blink{50%{opacity:.15}}
+.scan-row{
+  display:grid;grid-template-columns:1.5fr 1fr .6fr;gap:8px;
+  font-size:12.5px;padding:6px 8px;border-radius:6px;color:var(--ink-3);
+  font-family:"IBM Plex Mono",Menlo,monospace;
+  transition:background .3s ease,color .3s ease,box-shadow .3s ease;
+}
+.scan-row span:last-child{text-align:right}
+.scan-row.is-scanning{
+  background:#F3F5FD;color:var(--ink);box-shadow:inset 0 0 0 1px var(--pen-blue);
+}
+.scan-row.is-read{color:var(--ink);background:#F5F9F3}
+.scan-row.is-read span:first-child{position:relative;padding-left:16px}
+.scan-row.is-read span:first-child::before{
+  content:"✓";position:absolute;left:0;color:var(--ok);font-size:11px;
+}
+.scan-row.is-head{
+  font-family:"Zen Kaku Gothic New",sans-serif;font-size:11px;font-weight:700;
+  letter-spacing:.1em;color:var(--ink-3);border-bottom:1px solid var(--line);border-radius:0;
+}
 
 .steps{list-style:none;display:flex;flex-direction:column;gap:4px;margin-bottom:28px}
 .step{
@@ -356,6 +404,11 @@ table.criteria tr:last-child td{border-bottom:none}
       </div>
       <div class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="pbar"><span id="pbar-fill"></span></div>
 
+      <p class="ai-status" aria-live="polite">
+        <span class="ai-orb" aria-hidden="true"></span>
+        <span id="ai-status-text">AIがスプレッドシートに接続しています…</span>
+      </p>
+
       <ol class="steps" id="steps">
         <li class="step" data-step>
           <span class="check" aria-hidden="true">
@@ -409,6 +462,18 @@ table.criteria tr:last-child td{border-bottom:none}
           <span class="step-sub" data-sub></span>
         </li>
       </ol>
+
+      <div class="scan-sheet" id="scan-sheet" aria-hidden="true">
+        <div class="sheet-scan-title"><span class="rec"></span>AI READS — 2026年度 前学期_成績</div>
+        <div class="scan-row is-head"><span>授業</span><span>種別</span><span>点数</span></div>
+        <div class="scan-row" data-scan><span>統計学</span><span>小テスト 第9回</span><span>72</span></div>
+        <div class="scan-row" data-scan><span>統計学</span><span>課題 第3回</span><span>92</span></div>
+        <div class="scan-row" data-scan><span>統計学</span><span>中間試験</span><span>78</span></div>
+        <div class="scan-row" data-scan><span>アルゴリズム論</span><span>小テスト 第10回</span><span>86</span></div>
+        <div class="scan-row" data-scan><span>アルゴリズム論</span><span>課題 第4回</span><span>95</span></div>
+        <div class="scan-row" data-scan><span>マーケティング論</span><span>小テスト 第8回</span><span>56</span></div>
+        <div class="scan-row" data-scan><span>マーケティング論</span><span>中間試験</span><span>62</span></div>
+      </div>
 
       <div class="log" id="log" aria-live="polite"></div>
 
@@ -597,7 +662,7 @@ const fmt1 = n => (Math.round(n*10)/10).toString();
 /* ================= 画面切替 ================= */
 const screens = { start:'screen-start', progress:'screen-progress', result:'screen-result' };
 let timers = [];
-function clearTimers(){ timers.forEach(clearTimeout); timers=[]; }
+function clearTimers(){ timers.forEach(id=>{clearTimeout(id);clearInterval(id);}); timers=[]; }
 function goto(name){
   clearTimers();
   for(const k in screens){
@@ -636,21 +701,44 @@ const STEPS = [
 ];
 const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+const AI_STATUS = [
+  'AIがスプレッドシートに接続しています…',
+  'AIが成績行を順に読み込んでいます…',
+  'AIがシラバスから採点基準を解析しています…',
+  '配点に従って獲得点を計算しています…',
+  '過去3学期の推移から期末成績を予測しています…',
+];
+
 function runCollection(){
   const stepEls=[...document.querySelectorAll('[data-step]')];
+  const scanRows=[...document.querySelectorAll('[data-scan]')];
   const log=document.getElementById('log');
   const fill=document.getElementById('pbar-fill');
   const pbar=document.getElementById('pbar');
   const pct=document.getElementById('pct');
   const doneBox=document.getElementById('progress-done');
+  const statusText=document.getElementById('ai-status-text');
   stepEls.forEach(el=>el.classList.remove('is-active','is-done'));
+  scanRows.forEach(r=>r.classList.remove('is-scanning','is-read'));
   log.innerHTML=''; fill.style.width='0%'; pct.textContent='0%';
   doneBox.classList.remove('is-shown');
+  statusText.textContent=AI_STATUS[0];
 
-  let t = reduced ? 0 : 0;
-  const stepDur = reduced ? 0 : 900;
+  const stepDur = reduced ? 0 : 1100;
+  const total = STEPS.length * stepDur;
 
-  const setPct = p => { fill.style.width=p+'%'; pbar.setAttribute('aria-valuenow',p); pct.textContent=p+'%'; };
+  /* 滑らかに加算する進捗カウンタ(目標値へゆっくり追いつく) */
+  let pctTarget=0, pctShown=0;
+  const tick=setInterval(()=>{
+    if(pctShown < pctTarget){
+      pctShown = Math.min(pctTarget, pctShown + Math.max(1, (pctTarget-pctShown)*0.12));
+      const v=Math.round(pctShown);
+      fill.style.width=v+'%'; pbar.setAttribute('aria-valuenow',v); pct.textContent=v+'%';
+    }
+  }, 60);
+  timers.push(tick);
+  const setPct = p => { pctTarget = p; if(reduced){ pctShown=p; const v=p; fill.style.width=v+'%'; pbar.setAttribute('aria-valuenow',v); pct.textContent=v+'%'; } };
+
   const addLog = (text, kind) => {
     const line=document.createElement('div');
     line.className='log-line';
@@ -660,10 +748,23 @@ function runCollection(){
     log.appendChild(line);
   };
 
+  /* 成績シートの行を順にスキャン */
+  scanRows.forEach((row,i)=>{
+    const at = reduced ? 0 : 350 + i*(total-500)/scanRows.length;
+    timers.push(setTimeout(()=>{
+      row.classList.add('is-scanning');
+      timers.push(setTimeout(()=>{ row.classList.remove('is-scanning'); row.classList.add('is-read'); }, reduced?0:300));
+    }, at));
+  });
+
+  let t = 0;
   STEPS.forEach((st,i)=>{
     timers.push(setTimeout(()=>{
       stepEls[i].classList.add('is-active');
-      setPct(Math.round((i)/STEPS.length*100)+4);
+      statusText.textContent = AI_STATUS[i];
+      /* 文言にふき出し風の再出現アニメーション */
+      statusText.style.animation='none'; void statusText.offsetWidth; statusText.style.animation='';
+      setPct(Math.round((i)/STEPS.length*100)+6);
       st.logs.forEach((lg,j)=>timers.push(setTimeout(()=>addLog(lg[0],lg[1]), (reduced?0:150)*(j+1))));
     }, t));
     t += stepDur;
@@ -676,6 +777,8 @@ function runCollection(){
   });
 
   timers.push(setTimeout(()=>{
+    statusText.textContent='収集が完了しました。結果をまとめています…';
+    setPct(100);
     doneBox.classList.add('is-shown');
     if(!reduced) timers.push(setTimeout(()=>goto('result'), 1800));
   }, t+200));
